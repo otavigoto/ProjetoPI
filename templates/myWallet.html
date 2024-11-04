@@ -1,0 +1,39 @@
+{%extends "base.html"%}
+
+{%block content%}
+    
+    <h1>Minha carteira</h1>
+    <h2>Saldo: {{saldo}}</h2>
+    <a href="{{url_for('formsBuyCredits')}}">Adicionar Fundos</a>
+    <a href="{{url_for('formsWithdrawCredits')}}">Sacar Fundos</a>
+    
+    <table border="1">
+        <tr>
+            <th>ID</th>
+            <th>Tipo</th>
+            <th>Valor</th>
+            <th>Data</th>
+        </tr>
+        {% for item in historico %}
+        <tr>
+            <td>{{ item.id }}</td>
+            <td>{{ item.tipo }}</td>
+            <td>{{ item.valor }}</td>
+            <td>{{ item.data }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+          // Seleciona todas as mensagens
+          const messages = document.querySelectorAll('.messages li');
+          messages.forEach(message => {
+              // Adiciona a classe 'show' após um pequeno delay
+              setTimeout(() => {
+                  message.classList.add('show');
+              }, 100);
+          });
+      });
+  </script>  
+
+{%endblock%}

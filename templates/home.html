@@ -1,0 +1,123 @@
+{%extends "base.html"%}
+
+{%block content%}
+{%if session['admin'] == 'S'%}
+  <button><a href="{{url_for('approveEvents')}}">Aprove Events</a></button>
+  <button><a href="{{url_for('finalizarApostas')}}">Finalizar Apostas</a></button>
+{%else%}
+<a href="{{url_for('myWallet')}}"><img class="carteira" src="../static\assets\icons8-carteira-60.png" alt="carteira"></a>
+<br>
+<button><a href="{{ url_for('createNewEvent') }}">Create Event</a></button>
+<br>
+<br>
+<form onsubmit="three()" methods="get" action = "{{url_for('resultEvents')}}">
+  <div class = "div1" >
+      <input type="text" name ="q" placeholder="Pesquise" id = "search" class = "searchbar">
+      <input type ="submit" class = "button" id = "button1" onmousedown = "one()" onmouseup="two()" value ="Vai!"> </input>
+  </div>
+</form>
+
+<br>
+
+<button><a href="{{ url_for('categoryEvents') }}">Categories</a></button>
+{%if dataapostas or maisapostas%}
+<br><br>
+<h1>Destaques:</h1>
+<br>
+{%endif%}
+{%if dataapostas%}
+
+<h2>Próximos de vencer</h2>
+  <table border="1" cellpadding="10">
+  <th>Id Evento</th>
+  <th>Titulo</th>
+  <th>Descrição</th>
+  <th>Valor maximo</th>
+  <th>Valor minimo</th>
+  <th>Data inicio aposta</th>
+  <th>Data fim aposta</th>
+  <th>Data fim evento</th>
+  <th>Categoria</th>
+  <th>Resposta</th>
+  {%for rows in (dataapostas)%}
+    <tr>
+      <td>{{rows[0]}}</td>
+      <td>{{rows[2]}}</td>
+      <td>{{rows[3]}}</td>
+      <td>{{rows[4]}}</td>
+      <td>{{rows[5]}}</td>
+      <td>{{rows[7]}}</td>
+      <td>{{rows[9]}}</td>
+      <td>{{rows[8]}}</td>
+      <td>{{rows[11]}}</td>
+      <td><a href="/apostar-evento/{{rows[0]}}">Apostar</a></td>
+    </tr>
+  {%endfor%}
+  </table>
+{%endif%}
+
+{%if maisapostas%}
+
+<h2>Mais apostados</h2>
+  <table border="1" cellpadding="10">
+  <th>Id Evento</th>
+  <th>Titulo</th>
+  <th>Descrição</th>
+  <th>Valor maximo</th>
+  <th>Valor minimo</th>
+  <th>Data inicio aposta</th>
+  <th>Data fim aposta</th>
+  <th>Data fim evento</th>
+  <th>Categoria</th>
+  <th>Resposta</th>
+  {%for rows in (maisapostas)%}
+    <tr>
+      <td>{{rows[0]}}</td>
+      <td>{{rows[2]}}</td>
+      <td>{{rows[3]}}</td>
+      <td>{{rows[4]}}</td>
+      <td>{{rows[5]}}</td>
+      <td>{{rows[7]}}</td>
+      <td>{{rows[9]}}</td>
+      <td>{{rows[8]}}</td>
+      <td>{{rows[11]}}</td>
+      <td><a href="/apostar-evento/{{rows[0]}}">Apostar</a></td>
+    </tr>
+  {%endfor%}
+  </table>
+{%endif%}
+
+{%if result%}
+  <h1>Todos Eventos</h1>
+  <table border="1" cellpadding="10">
+  <th>Id Evento</th>
+  <th>Titulo</th>
+  <th>Descrição</th>
+  <th>Valor maximo</th>
+  <th>Valor minimo</th>
+  <th>Data inicio aposta</th>
+  <th>Data fim aposta</th>
+  <th>Data fim evento</th>
+  <th>Categoria</th>
+  <th>Resposta</th>
+  {%for rows in (result)%}
+    <tr>
+    {%with event = result%}
+      <td>{{rows[0]}}</td>
+      <td>{{rows[2]}}</td>
+      <td>{{rows[3]}}</td>
+      <td>{{rows[4]}}</td>
+      <td>{{rows[5]}}</td>
+      <td>{{rows[7]}}</td>
+      <td>{{rows[9]}}</td>
+      <td>{{rows[8]}}</td>
+      <td>{{rows[11]}}</td>
+      <td><a href="/apostar-evento/{{rows[0]}}">Apostar</a></td>
+    {%endwith%}
+    </tr>
+  {%endfor%}
+  </table>
+{%endif%}
+{%endif%}
+
+{%endblock%}

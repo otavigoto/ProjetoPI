@@ -1,0 +1,73 @@
+{%extends "base.html"%}
+
+{%block content%}
+<form id="opcoesForm" action=" {{url_for('categoryEvents')}}" method="post">
+  <label for="opcoes">Selecione uma opção:</label>
+      <select name="opcoes" id="opcoes" onchange="document.getElementById('opcoesForm').submit();">
+          <option value="" disabled selected>Nenhum</option>
+          <option value="esportes">Esportes</option>
+          <option value="animais">Animais</option>
+          <option value="eleicoes">Eleições</option>
+          <option value="bolsa">Bolsa de valores</option>
+          <option value="futebol">Futebol</option>
+      </select>
+</form>
+<br>
+
+  <form id="filtroForm" action="{{ url_for('categoryEvents') }}" method="post">
+    <input type="hidden" name="opcoes" value="{{ opcoes }}">
+    <label for="filtro">Ordenar por:</label>
+    <select name="sort_by" id="filtro" onchange="document.getElementById('filtroForm').submit();">
+        <option value="" disabled selected>Selecione uma opção</option>
+        <option value="titulo_asc">Título (Alfabética)</option>
+        <option value="titulo_desc">Título (Reversa)</option>
+        <option value="valor_minimo_asc">Valor Mínimo (Crescente)</option>
+        <option value="valor_minimo_desc">Valor Mínimo (Decrescente)</option>
+    </select>
+</form>
+  <br>
+
+  <h1>Resultados:</h1>
+
+  <br>
+
+  <table>
+      <td>
+        {%if result%}
+        <h2>Categoria: {{ opcoes }}</h2>
+        <table border="1" cellpadding="10">
+          <th>Id Evento</th>
+          <th>Titulo</th>
+          <th>Descrição</th>
+          <th>Valor maximo</th>
+          <th>Valor minimo</th>
+          <th>Data inicio aposta</th>
+          <th>Data fim evento</th>
+          <th>Data fim aposta</th>
+          <th>Categoria</th>
+          <th>Resposta</th>
+        {%for rows in range(0,total)%}
+          {%with event = result%}
+          <tr>
+            <td>{{event[rows][0]}}</td>
+            <td>{{event[rows][2]}}</td>
+            <td>{{event[rows][3]}}</td>
+            <td>{{event[rows][4]}}</td>
+            <td>{{event[rows][5]}}</td>
+            <td>{{event[rows][7]}}</td>
+            <td>{{event[rows][9]}}</td>
+            <td>{{event[rows][8]}}</td>
+            <td>{{event[rows][11]}}</td>
+          </tr>
+          {%endwith%}
+        {%endfor%}
+      
+      {%else%}
+      <h1>Nenhum evento encontrado</h1>
+      {%endif%}
+      </td>
+  </table>
+</form>
+
+
+{%endblock%}

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Creditar</title>
+  <style>
+    #depositoForm {
+      display: none; /* Oculte o formulário inicialmente */
+    }
+  </style>
+  <script>
+    function mostrarFormulario() {
+      document.getElementById('depositoForm').style.display = 'block'; // Mostra o formulário
+    }
+  </script>
+</head>
+<body>
+  <h1>Você deseja carregar sua carteira?</h1>
+  <a href="javascript:void(0);" onclick="mostrarFormulario()">Sim</a>
+  <a href="{{url_for('index')}}">Não</a>
+
+  <form id="depositoForm" action="{{ url_for('askBuyCredits') }}" method="POST">
+    <h2>Insira o valor a ser depositado</h2>
+    <label for="valor_deposito">Valor do depósito: </label>
+    <input type="number" id="valor_deposito" name="valor_deposito" required>
+    <button type="submit">Enviar</button>
+  </form>
+
+</body>
+</html>

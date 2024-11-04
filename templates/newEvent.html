@@ -1,0 +1,43 @@
+{%extends "base.html"%}
+
+{%block content%}
+<h2>Register Event</h2>
+    <form action="{{url_for('createNewEvent')}}" method="POST">
+
+        <label for="titulo">Title:</label>
+        <input type="text" id="titulo" name="titulo" maxlength="50" required><br><br>
+
+        <label for="descricao">Descrição:</label>
+        <input type="text" id="descricao" name="descricao" maxlength="150" required><br><br>
+
+        <label for="valor_max_aposta">Valor Máximo de Aposta:</label>
+        <input type="number" id="valor_max_aposta" name="valor_max_aposta" step="0.01"  required><br><br>
+
+        <label for="valor_min_aposta">Valor Mínimo de Aposta:</label>
+        <input type="number" id="valor_min_aposta" name="valor_min_aposta" step="0.01" min="1" required><br><br>
+
+        <label for="data_inicio_aposta">Data de Início da Aposta:</label>
+        <input type="datetime-local" id="data_inicio_aposta" name="data_inicio_aposta" required><br><br>
+
+        <label for="data_fim_aposta">Data de Fim da Aposta:</label>
+        <input type="datetime-local" id="data_fim_aposta" name="data_fim_aposta" required><br><br>
+
+
+        <label for="data_fim_evento">Data de Fim do Evento:</label>
+        <input type="date" id="data_fim_evento" name="data_fim_evento" required><br><br>
+
+
+        <label for="opcoes">Selecione uma opção:</label>
+        <select name="opcoes" id="opcoes">
+            <option value="esportes">Esportes</option>
+            <option value="animais">Animais</option>
+            <option value="eleicoes">Eleições</option>
+            <option value="bolsa">Bolsa de valores</option>
+            <option value="futebol">Futebol</option>
+        </select>
+
+        <br><br>
+
+        <button type="submit">Cadastrar Evento</button>
+    </form>
+{%endblock%}

@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<form action="{{ url_for('withdrawCredits') }}" method="POST">
+  <h2>Informar Conta Bancária</h2>
+  
+  <label for="banco">Banco:</label>
+  <input type="text" id="banco" name="banco" required>
+
+  <label for="agencia">Agência / Número da Conta:</label>
+  <input type="text" id="agencia" name="agencia" placeholder="Agência - Conta" required>
+
+  <label for="valor_a_retirar">Digite o valor do saque:</label>
+  <input type="number" id="valor_a_retirar" name="valor_a_retirar" placeholder="Valor de saque" required>
+
+  <label for="tipoConta">Tipo de Conta:</label>
+  <select id="tipoConta" name="tipoConta" required>
+      <option value="">Selecione</option>
+      <option value="corrente">Conta Corrente</option>
+      <option value="pix">Chave PIX</option>
+  </select>
+
+  <label for="chavePix" id="chavePixLabel" style="display:none;">Chave PIX:</label>
+  <input type="text" id="chavePix" name="chavePix" style="display:none;" placeholder="Informe a chave PIX">
+  
+  <button type="submit">Enviar</button>
+</form>
+
+<script>
+  const tipoConta = document.getElementById('tipoConta');
+  const chavePix = document.getElementById('chavePix');
+  const chavePixLabel = document.getElementById('chavePixLabel');
+
+  tipoConta.addEventListener('change', function () {
+    if (this.value === 'pix') {
+      chavePix.style.display = 'block';
+      chavePixLabel.style.display = 'block';
+      chavePix.required = true;
+    } else {
+      chavePix.style.display = 'none';
+      chavePixLabel.style.display = 'none';
+      chavePix.required = false;
+    }
+  });
+</script>
+{% endblock %}

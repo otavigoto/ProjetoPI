@@ -1,0 +1,36 @@
+{%extends 'base.html'%}
+
+{%block content%}
+
+{%if eventos%}
+<h2>EVENTOS FINALIZADOS</h2>
+  <table border="1" cellpadding="10">
+  <th>Id Evento</th>
+  <th>Titulo</th>
+  <th>Descrição</th>
+  <th>Valor maximo</th>
+  <th>Valor minimo</th>
+  <th>Data inicio aposta</th>
+  <th>Data fim aposta</th>
+  <th>Data fim evento</th>
+  <th>Categoria</th>
+  <th>Resposta</th>
+  {%for rows in (eventos)%}
+    <tr>
+      <td>{{rows[0]}}</td>
+      <td>{{rows[2]}}</td>
+      <td>{{rows[3]}}</td>
+      <td>{{rows[4]}}</td>
+      <td>{{rows[5]}}</td>
+      <td>{{rows[7]}}</td>
+      <td>{{rows[9]}}</td>
+      <td>{{rows[8]}}</td>
+      <td>{{rows[11]}}</td>
+      <td><a href="/finalizarApostas/{{rows[0]}}">Finalizar Aposta</a></td>
+    </tr>
+  {%endfor%}
+  </table>
+{%endif%}
+
+
+{%endblock%}

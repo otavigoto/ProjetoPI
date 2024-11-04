@@ -1,0 +1,47 @@
+{%extends 'base.html' %}
+
+{%block content%}
+
+{%if account%}
+  <table border="1" cellpadding="10">
+    <th>Id Evento</th>
+    <th>Id Usuario</th>
+    <th>Titulo</th>
+    <th>Descrição</th>
+    <th>Valor maximo</th>
+    <th>Valor minimo</th>
+    <th>Situação</th>
+    <th>Data inicio aposta</th>
+    <th>Data fim evento</th>
+    <th>Data fim aposta</th>
+    <th>Numero de apostas</th>
+    <th>Categoria</th>
+    <th>Resposta</th>
+    {%for rows in range(0,total)%}
+    <tr>
+    <form action="{{ url_for('approveEvents')}}" method="post"></form>>
+    {%with event = account%}
+      {%for events in event[rows]%}
+        <td>{{events}}</td>
+      {%endfor%}
+      <td>
+      <div id="event{{event[rows][0]}}">
+      <a href="/aprovar-evento/{{event[rows][0]}}">Approve</a>
+      <form id="opcoesForm" action=" {{url_for('desaprovar_evento', evento_id=event[rows][0])}}" method="post">
+            <select name="opcoes" id="opcoes" onchange="document.getElementById('opcoesForm').submit();">
+                <option value="" disabled selected>Rejeitar</option>
+                <option value="confuso">Texto Confuso</option>
+                <option value="inapropriado">Texto Inapropriado</option>
+                <option value="politicas">Não Respeita as políticas ou termos da plataforma</option>
+            </select>
+      </form>
+      </div>
+      </td>
+      </tr>
+    {%endwith%}
+    </form>
+  {%endfor%}
+  </table>
+{%endif%}
+
+{%endblock%}

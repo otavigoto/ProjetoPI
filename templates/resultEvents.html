@@ -1,0 +1,43 @@
+{%extends "base.html"%}
+
+{%block content%}
+
+
+<form method = "post" action = "{{url_for('searchEvents')}}">
+  <h1>Resultados:</h1>
+  <table>
+      <td>
+        {%if q%}
+        <table border="1" cellpadding="10">
+          <th>Id Evento</th>
+          <th>Titulo</th>
+          <th>Descrição</th>
+          <th>Valor maximo</th>
+          <th>Valor minimo</th>
+          <th>Data inicio aposta</th>
+          <th>Data fim aposta</th>
+          <th>Data fim evento</th>
+          <th>Categoria</th>
+          <th>Resposta</th>
+        {%for rows in range(0,total)%}
+          {%with event = q%}
+          <tr>
+            <td>{{event[rows][0]}}</td>
+            <td>{{event[rows][2]}}</td>
+            <td>{{event[rows][3]}}</td>
+            <td>{{event[rows][4]}}</td>
+            <td>{{event[rows][5]}}</td>
+            <td>{{event[rows][7]}}</td>
+            <td>{{event[rows][9]}}</td>
+            <td>{{event[rows][8]}}</td>
+            <td>{{event[rows][11]}}</td>
+          </tr>
+          {%endwith%}
+        {%endfor%}
+      {%endif%}
+      </td>
+  </table>
+</form>
+
+
+{%endblock%}
