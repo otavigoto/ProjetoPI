@@ -163,7 +163,7 @@ def login():
                 session['admin'] = account[1]
                 session['name'] = account[2]
                 session['email'] = account[3]
-                msg = 'Logged in successfully !'
+                flash('Entrou com sucesso !')
 
                 id_user = session['userid']
 
@@ -177,14 +177,14 @@ def login():
                 if resultado is not None:
                     session['saldo'] = resultado[0]  # Acessa o primeiro valor retornado
                 else:
-                    session['saldo'] = None  # Ou outra lógica de tratamento de erro
-
-                if carteira == None or carteira == []:
-                    cursor.execute(f'INSERT INTO carteira(id_usuarios,saldo)VALUES({id_user},0)')
-                return render_template('askBuyCredits.html')
+                    session['saldo'] = None
+                if session['admin'] == 'N':
+                  return render_template('askBuyCredits.html')
+                else:
+                  return redirect(url_for('home'))
 
         else:
-            msg = 'Incorrect username / password'
+            flash('Email ou senha incorretos')
         cursor.close()
         connection.close()
     return render_template('login.html', title='Login',msg=msg)  
@@ -240,21 +240,19 @@ def home():
 
 @app.route('/apostar-evento/<int:evento_id>', methods=['GET', 'POST'])
 def apostar(evento_id):
+  if 'loggedin' in session and session['admin'] == 'N':
     connection = get_db()
     cursor = connection.cursor()
 
     # Verifica se o evento é aprovado e ainda está aberto para apostas
-    cursor.execute(
-        'SELECT id_eventos FROM eventos WHERE id_eventos = %s AND is_aprovado = "S" AND data_fim_aposta > NOW()', 
-        (evento_id,)
-    )
+    cursor.execute('SELECT * FROM eventos WHERE id_eventos = %s AND is_aprovado = "S" AND data_fim_aposta > NOW() AND data_inicio_aposta < NOW()', (evento_id,))
     result = cursor.fetchone()
     
     if not result:
-        flash('Evento inválido ou apostas encerradas', 'error')
+        flash('Apostas ja terminaram ou vão começar', 'error')
         cursor.close()
         connection.close()
-        return redirect(url_for('categoryEvents'))
+        return redirect(url_for('home'))
 
     user_id = session['userid']
     
@@ -266,6 +264,8 @@ def apostar(evento_id):
         valor_aposta = request.form.get('valor_aposta')
         resposta = request.form.get('naoapostar')
         if resposta == 'naoapostar':
+          cursor.close()
+          connection.close()
           return redirect(url_for('home'))
         else:
           valor_aposta = float(valor_aposta)
@@ -276,6 +276,11 @@ def apostar(evento_id):
               cursor.close()
               connection.close()
               return redirect(url_for('formsBuyCredits'))
+          elif result[4] < valor_aposta or result[5] > valor_aposta:
+              flash('Quantidade apostada inválida', 'error')
+              cursor.close()
+              connection.close()
+              return redirect(url_for('home'))
           else:
               # Atualiza o saldo do usuário na carteira
               cursor.execute(
@@ -303,11 +308,12 @@ def apostar(evento_id):
     cursor.close()
     connection.close()
     return render_template('betEvent.html', result=result)
-
+  else:
+    return redirect(url_for('home'))
 
 @app.route('/finalizarApostas', methods=['GET', 'POST'])
 def finalizarApostas():
-  if session['admin'] == 'S':
+  if session['admin'] == 'S' and 'loggedin' in session:
     
     connection = get_db()
     cursor = connection.cursor()
@@ -330,7 +336,7 @@ def finalizarApostas():
   
 @app.route('/finalizarApostas/<int:evento_id>', methods=['GET', 'POST'])
 def finalizar(evento_id):
-  if session['admin'] == 'S':
+  if session['admin'] == 'S' and 'loggedin' in session:
     connection = get_db()
     cursor = connection.cursor()
     
@@ -376,46 +382,49 @@ def finalizar(evento_id):
   
 @app.route('/createNewEvent', methods=['GET', 'POST',])
 def createNewEvent():
-  if request.method == 'POST':
-    id_usuarios = session['userid']
-    titulo = request.form.get('titulo')
-    descricao = request.form.get('descricao')
-    valor_max_aposta = request.form.get('valor_max_aposta')
-    valor_min_aposta = request.form.get('valor_min_aposta')
-    is_aprovado = 'I'
-    data_inicio_aposta = request.form.get('data_inicio_aposta')
-    data_fim_evento = request.form.get('data_fim_evento')
-    data_fim_aposta = request.form.get('data_fim_aposta')
-    categoria = request.form.get('opcoes')
-    
-    data_atual = datetime.now()
-    
-    data1 = datetime.strptime(data_inicio_aposta,"%Y-%m-%dT%H:%M")
-    data2 = datetime.strptime(data_fim_aposta, "%Y-%m-%dT%H:%M")
-    
-    datatotal = data_fim_evento + 'T00:00'
-    
-    data3 = datetime.strptime(datatotal, "%Y-%m-%dT%H:%M")
-    
-    if data1 > data2 or data1 == data2 or data2 >= data3:
-      flash('Data de inicio de apostas maior que o fim ou fim da aposta é menor ou igual ao fim do evento')
-      return render_template('newEvent.html', title='Criar Evento')
-    elif valor_min_aposta > valor_max_aposta:
-      flash('Valor maximo menor que o valor minimo')
-      return render_template('newEvent.html', title='Criar Evento')
-    elif data_atual > data1 or data_atual > data2 or data_atual > data3:
-      flash('Evento não pode ser no passado')
-      return render_template('newEvent.html', title='Criar Evento')
-    else:
+  if session['admin'] == 'N' and 'loggedin' in session:
+    if request.method == 'POST':
+      id_usuarios = session['userid']
+      titulo = request.form.get('titulo')
+      descricao = request.form.get('descricao')
+      valor_max_aposta = request.form.get('valor_max_aposta')
+      valor_min_aposta = request.form.get('valor_min_aposta')
+      is_aprovado = 'I'
+      data_inicio_aposta = request.form.get('data_inicio_aposta')
+      data_fim_evento = request.form.get('data_fim_evento')
+      data_fim_aposta = request.form.get('data_fim_aposta')
+      categoria = request.form.get('opcoes')
       
-      connection = get_db()
-      cursor = connection.cursor()
+      data_atual = datetime.now()
       
-      cursor.execute('INSERT INTO eventos VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s,%s,%s)', (None,id_usuarios,titulo,descricao,valor_max_aposta,valor_min_aposta,is_aprovado,data_inicio_aposta,data_fim_evento,data_fim_aposta,0,categoria))
-      connection.commit()
-      cursor.close()
-      connection.close()
-      return redirect(url_for('home'))
+      data1 = datetime.strptime(data_inicio_aposta,"%Y-%m-%dT%H:%M")
+      data2 = datetime.strptime(data_fim_aposta, "%Y-%m-%dT%H:%M")
+      
+      datatotal = data_fim_evento + 'T00:00'
+      
+      data3 = datetime.strptime(datatotal, "%Y-%m-%dT%H:%M")
+      
+      if data1 > data2 or data1 == data2 or data2 >= data3:
+        flash('Data de inicio de apostas maior que o fim ou fim da aposta é menor ou igual ao fim do evento')
+        return render_template('newEvent.html', title='Criar Evento')
+      elif valor_min_aposta > valor_max_aposta:
+        flash('Valor maximo menor que o valor minimo')
+        return render_template('newEvent.html', title='Criar Evento')
+      elif data_atual > data1 or data_atual > data2 or data_atual > data3:
+        flash('Evento não pode ser no passado')
+        return render_template('newEvent.html', title='Criar Evento')
+      else:
+        
+        connection = get_db()
+        cursor = connection.cursor()
+        
+        cursor.execute('INSERT INTO eventos VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s,%s,%s)', (None,id_usuarios,titulo,descricao,valor_max_aposta,valor_min_aposta,is_aprovado,data_inicio_aposta,data_fim_evento,data_fim_aposta,0,categoria))
+        connection.commit()
+        cursor.close()
+        connection.close()
+        return redirect(url_for('home'))
+  else:
+    return redirect(url_for('home'))
   return render_template('newEvent.html', title='Criar Evento')
 
 
@@ -423,7 +432,7 @@ def createNewEvent():
 def approveEvents():
   idle = ['I']
   
-  if 'loggedin' not in session:
+  if 'loggedin' not in session or session['admin'] == 'N':
     return redirect(url_for('login'))
   else:
     
@@ -446,45 +455,50 @@ def approveEvents():
 
 @app.route('/aprovar-evento/<int:evento_id>')
 def aprovar_evento(evento_id):
-  
-  connection = get_db()
-  cursor = connection.cursor()
-  
-  cursor.execute("UPDATE eventos SET is_aprovado = 'S' WHERE id_eventos = %s", (evento_id,))
-  connection.commit()
-  cursor.close()
-  connection.close()
+  if session['admin'] == 'S' and 'loggedin' in session:
+    connection = get_db()
+    cursor = connection.cursor()
+    
+    cursor.execute("UPDATE eventos SET is_aprovado = 'S' WHERE id_eventos = %s", (evento_id,))
+    connection.commit()
+    cursor.close()
+    connection.close()
+  else:
+    return redirect(url_for('home'))
   return redirect(url_for('approveEvents'))
 
 @app.route('/desaprovar-evento/<int:evento_id>', methods=['GET', 'POST'])
 def desaprovar_evento(evento_id):
-  justificativa = request.form.get('opcoes')
-  
-  connection = get_db()
-  cursor = connection.cursor()
-  
-  cursor.execute(f'SELECT id_usuarios FROM eventos WHERE id_eventos = {evento_id}')
-  evento = cursor.fetchone()
-  
-  cursor.execute('SELECT email FROM usuarios WHERE id_usuarios = %s', (evento[0],))
-  usuario = cursor.fetchone()
+  if session['admin'] == 'S' and 'loggedin' in session:
+    justificativa = request.form.get('opcoes')
+    
+    connection = get_db()
+    cursor = connection.cursor()
+    
+    cursor.execute(f'SELECT id_usuarios FROM eventos WHERE id_eventos = {evento_id}')
+    evento = cursor.fetchone()
+    
+    cursor.execute('SELECT email FROM usuarios WHERE id_usuarios = %s', (evento[0],))
+    usuario = cursor.fetchone()
 
-  destinatario = usuario[0]
-  assunto = f'Evento {evento_id} Rejeitado'
-  mensagem = f'O evento {evento_id} foi rejeitado pela seguinte razão: {justificativa}'
+    destinatario = usuario[0]
+    assunto = f'Evento {evento_id} Rejeitado'
+    mensagem = f'O evento {evento_id} foi rejeitado pela seguinte razão: {justificativa}'
 
-  try:
-      msg = Message(assunto, sender=app.config['MAIL_USERNAME'], recipients=[destinatario])
-      msg.body = mensagem
-      mail.send(msg)
-      flash('Email enviado com sucesso!')
-      cursor.execute(f"UPDATE eventos SET is_aprovado = 'N' WHERE id_eventos = {evento_id}")
-      connection.commit()
-  except Exception as e:
-      flash(f'Erro ao enviar o email: {e}')
-  cursor.close()
-  connection.close()    
-  return redirect(url_for('approveEvents'))
+    try:
+        msg = Message(assunto, sender=app.config['MAIL_USERNAME'], recipients=[destinatario])
+        msg.body = mensagem
+        mail.send(msg)
+        flash('Email enviado com sucesso!')
+        cursor.execute(f"UPDATE eventos SET is_aprovado = 'N' WHERE id_eventos = {evento_id}")
+        connection.commit()
+    except Exception as e:
+        flash(f'Erro ao enviar o email: {e}')
+    cursor.close()
+    connection.close()    
+    return redirect(url_for('approveEvents'))
+  else:
+    return redirect(url_for('home'))
   
 @app.route('/searchEvents', methods=['GET', 'POST',])
 def searchEvents():
@@ -492,22 +506,23 @@ def searchEvents():
 
 @app.route('/resultEvents', methods=['GET', 'POST',])
 def resultEvents():
-  
-  connection = get_db()
-  cursor = connection.cursor()
-  
-  q = request.args.get('q')
-  cursor.execute(f'SELECT * FROM eventos WHERE titulo LIKE "{q}" AND is_aprovado = "S"')
-  result = cursor.fetchall()
-  cursor.close()
-  connection.close()
-  total = len(result)
-  if result:
-    flash('Eventos encontrados')
+  if session['admin'] == 'S' and 'loggedin' in session:
+    connection = get_db()
+    cursor = connection.cursor()
+    
+    q = request.args.get('q')
+    cursor.execute(f'SELECT * FROM eventos WHERE titulo LIKE "{q}" AND is_aprovado = "S"')
+    result = cursor.fetchall()
+    cursor.close()
+    connection.close()
+    total = len(result)
+    if result:
+      flash('Eventos encontrados')
+    else:
+      flash('Não há eventos relacionados')
+    return render_template('resultEvents.html', q = result, total=total)
   else:
-    flash('Não há eventos relacionados')
-  return render_template('resultEvents.html', q = result, total=total)
-
+    return redirect(url_for('home'))
 @app.route('/categoryEvents', methods=['GET', 'POST',])
 def categoryEvents():
   
