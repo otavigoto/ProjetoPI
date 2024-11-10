@@ -1,245 +1,244 @@
 import mysql.connector
-from flask import Flask,render_template,url_for,redirect,request, session, flash
+from flask import Flask, render_template, url_for, redirect, request, session, flash
 from flask_mail import Mail, Message
 from datetime import datetime
 from random import randrange
 
-
 app = Flask(__name__)
-app.secret_key = 'shhhhhh'
+app.secret_key = 'shhhhhh'  # Chave de segurança para as sessões, que mantém o usuário logado e protege dados sensíveis.
+
+# Função para abrir uma conexão com o Banco de Dados MySQL.
 def get_db():
     try:
         conexao = mysql.connector.connect(
-            host='127.0.0.1',
-            user='root',
-            password='otavio2912',
-            database='bd_betinha',
+            host='127.0.0.1',       # IP do banco de dados.
+            user='root',            # Usuário de login do banco.
+            password='otavio2912',   # Senha do banco de dados.
+            database='bd_betinha',   # Nome do banco de dados que estamos usando.
         )
         return conexao
     except mysql.connector.Error as err:
         print(f"Erro: {err}")
         return None
 
+# Lista que armazena os eventos para exibir na interface.
 lista_itens_eventos = []
 
+# Configurações para envio de e-mail
 mail_settings = {
-  "MAIL_SERVER": 'smtp.gmail.com',
-  "MAIL_PORT": 465,
-  "MAIL_USE_TLS": False,
-  "MAIL_USE_SSL": True,
-  "MAIL_USERNAME": 'trabalhobetinha777@gmail.com',
-  "MAIL_PASSWORD": 'oabc hsen ryxu evla'
+    "MAIL_SERVER": 'smtp.gmail.com',     # Servidor de e-mail (aqui, o Gmail).
+    "MAIL_PORT": 465,                    # Porta de envio do e-mail.
+    "MAIL_USE_TLS": False,               # TLS desativado.
+    "MAIL_USE_SSL": True,                # SSL ativado para segurança.
+    "MAIL_USERNAME": 'trabalhobetinha777@gmail.com',  # E-mail remetente.
+    "MAIL_PASSWORD": 'oabc hsen ryxu evla'            # Senha do e-mail.
 }
-
 app.config.update(mail_settings)
-
 mail = Mail(app)
 
+# Função para aplicar taxa de saque dependendo do valor sacado.
 def aplicarTaxaSaque(valor_saque):
     if valor_saque <= 100:
-        taxa = 0.04
+        taxa = 0.04  # 4% de taxa
     elif valor_saque <= 1000:
-        taxa = 0.03
+        taxa = 0.03  # 3% de taxa
     elif valor_saque <= 5000:
-        taxa = 0.02
+        taxa = 0.02  # 2% de taxa
     elif valor_saque <= 100000:
-        taxa = 0.01    
+        taxa = 0.01  # 1% de taxa
     else:
-        taxa = 0
-    valor_final = valor_saque * (1 - taxa)
+        taxa = 0     # Sem taxa
+    valor_final = valor_saque * (1 - taxa)  # Calcula o valor final após aplicar a taxa
     return valor_saque
 
-
+# Função para movimentar saldo do usuário (saque ou depósito).
 def movimentarSaldo(valor, tipo_saldo, tipo_transacao, titulo_transacao):
-    # tipo_transacao: saque ou deposito
-    # tipo_saldo: saldo ou saldo_simulado
-    id_user = session.get('userid')
-
+    id_user = session.get('userid')  # Identifica o usuário logado pelo ID.
     connection = get_db()
     if connection:
         cursor = connection.cursor()
+        saldo = float(session['saldo'])  # Obtém o saldo atual do usuário.
 
-        saldo = session['saldo']
-        saldo = float(saldo)
-        valor = float(valor)
-        # Atualizando o saldo
-        if tipo_transacao == 'saque':
-            if saldo>=valor:
-                valor = aplicarTaxaSaque(valor)
-                cursor.execute('UPDATE carteira SET saldo = saldo - %s WHERE id_usuarios = %s',(valor, id_user))
+        if tipo_transacao == 'saque':  # Verifica se é um saque.
+            if saldo >= valor:
+                valor = aplicarTaxaSaque(valor)  # Aplica a taxa de saque.
 
-                flash('Saque concluido com sucesso!','success')
+                # Atualiza o saldo do usuário no banco de dados ao deduzir o valor do saque.
+                cursor.execute('UPDATE carteira SET saldo = saldo - %s WHERE id_usuarios = %s', (valor, id_user))
+                flash('Saque concluído com sucesso!', 'success')
             else:
-                flash('Saldo insuficiente para saque','error')
+                flash('Saldo insuficiente para saque', 'error')
                 return False
-        elif tipo_transacao == 'deposito':
-            cursor.execute(
-                f'UPDATE carteira SET {tipo_saldo} = {saldo} + %s WHERE id_usuarios = %s',(valor, id_user)
-            )
-            flash('Depósito concluido com sucesso!','success')
-        if tipo_saldo == 'saldo':
-            if titulo_transacao == 'saque':
-                cursor.execute(
-                    'INSERT INTO historico_saldo (titulo, valor, data_transacao, id_usuarios) VALUES (%s, -%s, NOW(), %s)',
-                    (titulo_transacao, valor if titulo_transacao == 'saque' else valor, id_user)
-                )
-            else:
-                cursor.execute(
-                    'INSERT INTO historico_saldo (titulo, valor, data_transacao, id_usuarios) VALUES (%s, +%s, NOW(), %s)',
-                    (titulo_transacao, valor if tipo_transacao == 'saque' else valor, id_user)
-                )
-            
-        connection.commit()
+        elif tipo_transacao == 'deposito':  # Verifica se é um depósito.
+            # Atualiza o saldo do usuário no banco de dados, somando o valor do depósito ao saldo atual.
+            cursor.execute(f'UPDATE carteira SET {tipo_saldo} = {saldo} + %s WHERE id_usuarios = %s', (valor, id_user))
+            flash('Depósito concluído com sucesso!', 'success')
+
+        # Insere um histórico da transação no banco de dados para registrar o saque ou depósito.
+        cursor.execute(
+            'INSERT INTO historico_saldo (titulo, valor, data_transacao, id_usuarios) VALUES (%s, %s, NOW(), %s)',
+            (titulo_transacao, -valor if tipo_transacao == 'saque' else valor, id_user)
+        )
+
+        connection.commit()  # Confirma as mudanças no banco.
         cursor.close()
         connection.close()
-        
 
-
-
+# Rota da página inicial.
 @app.route('/')
 @app.route('/index')
 def index():
     if 'loggedin' in session:
-      return redirect(url_for('home'))
+        return redirect(url_for('home'))
     else:
-      return render_template('index.html', title='Index')
+        return render_template('index.html', title='Index')
 
+# Rota para a página de registro de usuários.
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-      if 'loggedin' in session:
+    if 'loggedin' in session:
         return redirect(url_for('index'))
-      elif request.method == 'POST':
-        
+    elif request.method == 'POST':
         connection = get_db()
         cursor = connection.cursor()
-        
-        admin = 'N'
-        name = request.form.get('name')
-        email = request.form.get('email')
-        password = request.form.get('password')
-        birth = request.form.get('birth')
-        
+
+        admin = 'N'  # Define o tipo do usuário (não é admin por padrão).
+        name = request.form.get('name')  # Pega o nome do formulário.
+        email = request.form.get('email')  # Pega o e-mail do formulário.
+        password = request.form.get('password')  # Pega a senha do formulário.
+        birth = request.form.get('birth')  # Pega a data de nascimento.
+
+        # Consulta SQL para verificar se o e-mail já está registrado.
         cursor.execute('SELECT * FROM usuarios WHERE email = %s', (email,))
         account = cursor.fetchone()
-        
-        if account:
-          cursor.close()
-          connection.close()
-          flash('Conta ja existe!')
-          return redirect(url_for('register'))
-        else:
-          cursor.execute('INSERT INTO usuarios VALUES(%s, %s, %s, %s, %s, %s)', (None, admin, name, email, password, birth))
-          
-          cursor.execute('SELECT * FROM usuarios WHERE email LIKE %s', (email,))
-          id_user = cursor.fetchone()
-          cursor.execute('INSERT INTO carteira VALUES (%s,%s,%s,%s,%s,%s,%s)', (None,id_user[0],0, 0, 0, 0, 0))
-          connection.commit()
-          cursor.close()
-          connection.close()
-          
-          flash('You have successfully registered')
-          return redirect(url_for('login'))
-      
-      return render_template('register.html', title='Register')
 
-@app.route('/login', methods=['GET', 'POST',])
+        if account:  # Se já existe, informa o usuário.
+            cursor.close()
+            connection.close()
+            flash('Conta já existe!')
+            return redirect(url_for('register'))
+        else:
+            # Insere um novo usuário no banco de dados.
+            # 'usuarios' tabela: armazena informações sobre os usuários, incluindo id, tipo de conta, nome, email, senha e data de nascimento.
+            cursor.execute('INSERT INTO usuarios VALUES (%s, %s, %s, %s, %s, %s)', (None, admin, name, email, password, birth))
+
+            # Cria uma carteira inicial para o novo usuário.
+            # 'carteira' tabela: guarda o saldo de cada usuário e suas informações financeiras (inicializa com saldo zero).
+            cursor.execute('SELECT * FROM usuarios WHERE email = %s', (email,))
+            id_user = cursor.fetchone()
+            cursor.execute('INSERT INTO carteira VALUES (%s, %s, %s, %s, %s, %s, %s)', (None, id_user[0], 0, 0, 0, 0, 0))
+            connection.commit()
+            cursor.close()
+            connection.close()
+
+            flash('Cadastro realizado com sucesso!')
+            return redirect(url_for('login'))
+
+    return render_template('register.html', title='Register')
+
+# Rota para login dos usuários.
+@app.route('/login', methods=['GET', 'POST'])
 def login():
     if 'loggedin' in session:
-      return redirect(url_for('index'))
-    msg=''
+        return redirect(url_for('index'))
+    msg = ''
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
         connection = get_db()
         if connection:
             cursor = connection.cursor()
-            cursor.execute('SELECT * FROM usuarios WHERE email = %s AND senha = %s', (email, password,))
+            # Verifica as credenciais do usuário, conferindo se o e-mail e a senha estão corretos.
+            cursor.execute('SELECT * FROM usuarios WHERE email = %s AND senha = %s', (email, password))
             account = cursor.fetchone()
 
-
             if account:
+                # Salva as informações de sessão do usuário após o login.
                 session['loggedin'] = True
                 session['userid'] = account[0]
                 session['admin'] = account[1]
                 session['name'] = account[2]
                 session['email'] = account[3]
-                flash('Entrou com sucesso !')
+                flash('Entrou com sucesso!')
 
-                id_user = session['userid']
-
-                #criando carteira caso não esteja criada
-                cursor.execute(f'SELECT * FROM carteira WHERE id_usuarios like {id_user}')
-                carteira = cursor.fetchall()
-
-                cursor.execute('SELECT saldo FROM carteira WHERE id_usuarios = %s',(id_user,))
+                # Consulta SQL para obter o saldo do usuário para exibir na interface.
+                cursor.execute('SELECT saldo FROM carteira WHERE id_usuarios = %s', (session['userid'],))
                 resultado = cursor.fetchone()
-                print(resultado)
-                if resultado is not None:
-                    session['saldo'] = resultado[0]  # Acessa o primeiro valor retornado
-                else:
-                    session['saldo'] = None
-                if session['admin'] == 'N':
-                  return render_template('askBuyCredits.html', title='Comprar Créditos')
-                else:
-                  return redirect(url_for('home'))
+                session['saldo'] = resultado[0] if resultado else None
 
-        else:
-            flash('Email ou senha incorretos')
-        cursor.close()
-        connection.close()
-    return render_template('login.html', title='Login',msg=msg)  
-  
-  
-@app.route('/askBuyCredits', methods=['POST',])
+                if session['admin'] == 'N':
+                    return render_template('askBuyCredits.html', title='Comprar Créditos')
+                else:
+                    return redirect(url_for('home'))
+            else:
+                flash('Email ou senha incorretos')
+            cursor.close()
+            connection.close()
+
+    return render_template('login.html', title='Login', msg=msg)
+
+# Rota para comprar créditos.
+@app.route('/askBuyCredits', methods=['POST'])
 def askBuyCredits():
     valor_deposito = request.form.get('valor_deposito')
-    movimentarSaldo(valor_deposito,'saldo','deposito','deposito')
-    return redirect (url_for('index'))
-  
+    movimentarSaldo(valor_deposito, 'saldo', 'deposito', 'deposito')
+    return redirect(url_for('index'))
 
+# Rota para o logout (sair) do usuário.
 @app.route('/logout')
 def logout():
-  session.pop('loggedin', None)
-  session.pop('admin', None)
-  session.pop('email', None)
-  session.pop('userid', None)
-  session.pop('name', None)
-  session.pop('saldo', None)
-  return redirect(url_for('login'))
-
+    session.pop('loggedin', None)
+    session.pop('admin', None)
+    session.pop('email', None)
+    session.pop('userid', None)
+    session.pop('name', None)
+    session.pop('saldo', None)
+    return redirect(url_for('login'))
+    
 @app.route('/home')
 def home():
+  # Verifica se o usuário está logado na sessão; se não, redireciona para a página de login
   if 'loggedin' not in session:
     return redirect(url_for('login'))
   else:
+    # Estabelece uma conexão com o banco de dados e cria um cursor para executar consultas
     connection = get_db()
     cursor = connection.cursor()
 
+    # Consulta eventos aprovados e cujas apostas ainda estão abertas
     cursor.execute(f'SELECT * FROM eventos WHERE is_aprovado = "S" AND data_fim_aposta > NOW()')
     result = cursor.fetchall()
-    total = len(result)
+    total = len(result)  # Conta o número total de eventos retornados
     
     if result:
-      
+      # Consulta eventos que estão aprovados e com data de aposta entre o momento atual e os próximos 20 dias
       cursor.execute('SELECT * FROM eventos WHERE is_aprovado = "S" AND data_fim_aposta BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 20 DAY);')
       dataapostas = cursor.fetchall()
       
+      # Seleciona os três eventos com maior número de apostas, aprovados e com data de fim de aposta ainda válida
       cursor.execute('SELECT e.* FROM eventos e JOIN ( SELECT num_apostas FROM eventos GROUP BY num_apostas ORDER BY num_apostas DESC LIMIT 3 ) AS top_eventos ON e.num_apostas = top_eventos.num_apostas AND is_aprovado = "S" AND data_fim_aposta > NOW()')
       maisapostas = cursor.fetchall()
+      
+      # Fecha o cursor e a conexão com o banco
       cursor.close()
       connection.close()
-      if dataapostas:
-        return render_template('home.html', title='HomePage', result=result,total=total,dataapostas=dataapostas, maisapostas=maisapostas)
-    
-      else:
-        return render_template('home.html', title='HomePage',result=result, total=total)
-    cursor.close()
-    connection.close()  
-  return render_template('home.html', title='HomePage', result=result, total=total)
 
+      # Renderiza a página inicial com as informações dos eventos
+      if dataapostas:
+        return render_template('home.html', title='HomePage', result=result, total=total, dataapostas=dataapostas, maisapostas=maisapostas)
+      else:
+        return render_template('home.html', title='HomePage', result=result, total=total)
+
+    # Fecha o cursor e a conexão com o banco
+    cursor.close()
+    connection.close()
+    
+  # Renderiza a página inicial caso não haja resultados
+  return render_template('home.html', title='HomePage', result=result, total=total)
 
 @app.route('/apostar-evento/<int:evento_id>', methods=['GET', 'POST'])
 def apostar(evento_id):
+  # Verifica se o usuário está logado e não é admin; apenas usuários comuns podem apostar
   if 'loggedin' in session and session['admin'] == 'N':
     connection = get_db()
     cursor = connection.cursor()
@@ -248,21 +247,26 @@ def apostar(evento_id):
     cursor.execute('SELECT * FROM eventos WHERE id_eventos = %s AND is_aprovado = "S" AND data_fim_aposta > NOW() AND data_inicio_aposta < NOW()', (evento_id,))
     result = cursor.fetchone()
     
+    # Se o evento não está disponível para apostas, exibe mensagem e redireciona para a página inicial
     if not result:
         flash('Apostas ja terminaram ou vão começar', 'error')
         cursor.close()
         connection.close()
         return redirect(url_for('home'))
 
+    # Obtém o ID do usuário a partir da sessão
     user_id = session['userid']
     
-    # Busca o saldo do usuário
+    # Busca o saldo do usuário na tabela de carteira
     cursor.execute('SELECT * FROM carteira WHERE id_usuarios = %s', (user_id,))
     saldo = cursor.fetchone()
 
+    # Se o método de solicitação é POST, significa que o usuário está tentando apostar
     if request.method == 'POST':
         valor_aposta = request.form.get('valor_aposta')
         resposta = request.form.get('naoapostar')
+        
+        # Caso o usuário selecione "não apostar", redireciona para a página inicial
         if resposta == 'naoapostar':
           cursor.close()
           connection.close()
@@ -270,30 +274,32 @@ def apostar(evento_id):
         else:
           valor_aposta = float(valor_aposta)
 
-          # Verifica se o saldo é suficiente para a aposta
+          # Verifica se o saldo do usuário é suficiente para a aposta
           if saldo[4] < valor_aposta:
               flash('Saldo insuficiente para essa aposta', 'error')
               cursor.close()
               connection.close()
               return redirect(url_for('formsBuyCredits'))
+          # Verifica se o valor da aposta está dentro do limite permitido pelo evento
           elif result[4] < valor_aposta or result[5] > valor_aposta:
               flash('Quantidade apostada inválida', 'error')
               cursor.close()
               connection.close()
               return redirect(url_for('home'))
           else:
-              # Atualiza o saldo do usuário na carteira
+              # Atualiza o saldo do usuário na tabela de carteira
               cursor.execute(
                   'UPDATE carteira SET saldo = saldo - %s WHERE id_usuarios = %s',
                   (valor_aposta, user_id)
               )
               
+              # Incrementa o número de apostas no evento
               cursor.execute(
                   'UPDATE eventos SET num_apostas = num_apostas + %s WHERE id_eventos = %s',
-                  (1,evento_id)
+                  (1, evento_id)
               )
 
-              # Insere a aposta na tabela de apostas
+              # Insere os dados da aposta na tabela de aposta_eventos
               cursor.execute(
                   'INSERT INTO aposta_eventos (id_eventos, id_usuarios, valor) VALUES (%s, %s, %s)',
                   (evento_id, user_id, valor_aposta)
@@ -305,31 +311,36 @@ def apostar(evento_id):
               flash('Aposta realizada com sucesso!', 'success')
               return redirect(url_for('home'))
 
+    # Fecha o cursor e a conexão com o banco
     cursor.close()
     connection.close()
+    # Renderiza a página de aposta para o evento específico
     return render_template('betEvent.html', title='Apostar', result=result)
   else:
+    # Redireciona para a página inicial se o usuário não estiver logado ou for admin
     return redirect(url_for('home'))
 
 @app.route('/finalizarApostas', methods=['GET', 'POST'])
 def finalizarApostas():
+  # Verifica se o usuário logado é admin e está na sessão; apenas admin pode finalizar apostas
   if session['admin'] == 'S' and 'loggedin' in session:
-    
     connection = get_db()
     cursor = connection.cursor()
-    
-    
+
+    # Seleciona eventos aprovados que já foram concluídos
     cursor.execute(
                     'SELECT * FROM eventos WHERE is_aprovado = "S" AND data_fim_evento < NOW();'
                 )
     eventos = cursor.fetchall()
     
+    # Se não houver eventos finalizados, exibe uma mensagem
     if not eventos:
       flash('Nenhum evento finalizado')
     
+    # Fecha o cursor e a conexão com o banco de dados
     cursor.close()
     connection.close()
-    
+
     return render_template('finalizarApostas.html', title='Finalizar Apostas',eventos=eventos)
   else:
     return redirect(url_for('home'))
