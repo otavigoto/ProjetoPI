@@ -26,7 +26,12 @@
       <td>{{rows[9]}}</td>
       <td>{{rows[8]}}</td>
       <td>{{rows[11]}}</td>
-      <td><a href="/finalizarApostas/{{rows[0]}}">Finalizar Aposta</a></td>
+      <td>
+        <form action="{{ url_for('finalizar', evento_id=rows[0]) }}" onsubmit="return confirm('Finalizar evento?');" type='input' method='POST'>
+          <input type="submit" name="sim" value="sim">
+          <input type="submit" name="nao" value="nao">
+        </form>
+      </td>
     </tr>
   {%endfor%}
   </table>
